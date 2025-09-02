@@ -24,7 +24,7 @@ cd Ketchlist
 
 Make it executable:
 
-chmod +x Ketchlist.py
+chmod 777 Ketchlist.py
 
 ## Usage
 Basic example:
