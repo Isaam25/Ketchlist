@@ -111,7 +111,23 @@ def leetspk(input_list):
             for combo in combine(combinations, ls[1], word):
                 yield combo
 
-def generate_wordlist(companies, output_file, start_year=None, end_year=2015, include_months=False, include_seasons=True, include_specials=True, relnum=None, verbose=False):
+def meets_password_policy(password, min_length=None, max_length=None, require_upper=False, require_lower=False, require_digit=False, require_special=False):
+    """Check if password meets the specified policy requirements."""
+    if min_length and len(password) < min_length:
+        return False
+    if max_length and len(password) > max_length:
+        return False
+    if require_upper and not any(c.isupper() for c in password):
+        return False
+    if require_lower and not any(c.islower() for c in password):
+        return False
+    if require_digit and not any(c.isdigit() for c in password):
+        return False
+    if require_special and not any(c in special_chars for c in password):
+        return False
+    return True
+
+def generate_wordlist(companies, output_file, start_year=None, end_year=2015, include_months=False, include_seasons=True, include_specials=True, relnum=None, verbose=False, password_policy=None):
     """Generate comprehensive wordlist based on company names and patterns."""
     if start_year is None:
         start_year = default_year
@@ -142,9 +158,12 @@ def generate_wordlist(companies, output_file, start_year=None, end_year=2015, in
         print(f"Include seasons: {include_seasons}")
         print(f"Include special chars: {include_specials}")
         print(f"Total years to process: {start_year - end_year + 1}")
+        if password_policy:
+            print(f"Password policy: {password_policy}")
     
     word_variations = []
     total_words = 0
+    filtered_words = 0
     
     try:
         with open(output_file, "w", encoding="utf-8") as f:
@@ -174,8 +193,11 @@ def generate_wordlist(companies, output_file, start_year=None, end_year=2015, in
             
             # Write base variations
             for variation in word_variations:
-                f.write(variation + "\n")
-                total_words += 1
+                if password_policy is None or meets_password_policy(variation, **password_policy):
+                    f.write(variation + "\n")
+                    total_words += 1
+                else:
+                    filtered_words += 1
             
             # Add special character combinations if requested
             if include_specials:
@@ -185,10 +207,22 @@ def generate_wordlist(companies, output_file, start_year=None, end_year=2015, in
                 special_count = 0
                 for variation in word_variations:
                     for char in special_chars:
-                        f.write(variation + char + "\n")  # word + special char
-                        f.write(char + variation + "\n")  # special char + word
-                        special_count += 2
-                        total_words += 2
+                        pwd1 = variation + char
+                        pwd2 = char + variation
+                        
+                        if password_policy is None or meets_password_policy(pwd1, **password_policy):
+                            f.write(pwd1 + "\n")
+                            special_count += 1
+                            total_words += 1
+                        else:
+                            filtered_words += 1
+                        
+                        if password_policy is None or meets_password_policy(pwd2, **password_policy):
+                            f.write(pwd2 + "\n")
+                            special_count += 1
+                            total_words += 1
+                        else:
+                            filtered_words += 1
                 
                 if verbose:
                     print(f"Added {special_count} special character combinations")
@@ -198,10 +232,22 @@ def generate_wordlist(companies, output_file, start_year=None, end_year=2015, in
                 for num in relnum:
                     num_str = str(num)
                     for char in special_chars:
-                        f.write(num_str + char + "\n")  # number + special char
-                        f.write(char + num_str + "\n")  # special char + number
-                        relnum_count += 2
-                        total_words += 2
+                        pwd1 = num_str + char
+                        pwd2 = char + num_str
+                        
+                        if password_policy is None or meets_password_policy(pwd1, **password_policy):
+                            f.write(pwd1 + "\n")
+                            relnum_count += 1
+                            total_words += 1
+                        else:
+                            filtered_words += 1
+                        
+                        if password_policy is None or meets_password_policy(pwd2, **password_policy):
+                            f.write(pwd2 + "\n")
+                            relnum_count += 1
+                            total_words += 1
+                        else:
+                            filtered_words += 1
                 
                 if verbose:
                     print(f"Added {relnum_count} relation number + special char combinations")
@@ -209,6 +255,8 @@ def generate_wordlist(companies, output_file, start_year=None, end_year=2015, in
         print(f"Wordlist generated successfully: {output_file}")
         if verbose:
             print(f"Total passwords generated: {total_words:,}")
+            if password_policy:
+                print(f"Passwords filtered out by policy: {filtered_words:,}")
         
     except IOError as e:
         print(f"Error writing to file {output_file}: {e}", file=sys.stderr)
@@ -226,7 +274,45 @@ Examples:
   %(prog)s -c "TechCorp" "DataSys" -o combined_wordlist.txt
   %(prog)s -c "MyCompany" -y 2024 -e 2010 --months --no-specials
   %(prog)s -c "CompanyName" -r 456 789 101112 -o custom_wordlist.txt
+  %(prog)s -c "SecureCorp" --min-length 8 --max-length 16 --require-upper --require-digit
+  %(prog)s -c "TechFirm" --min-length 12 --require-upper --require-lower --require-digit --require-special
         """
+    )
+    
+    parser.add_argument(
+        "--min-length",
+        type=int,
+        help="Minimum password length"
+    )
+    
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        help="Maximum password length"
+    )
+    
+    parser.add_argument(
+        "--require-upper",
+        action="store_true",
+        help="Require at least one uppercase letter"
+    )
+    
+    parser.add_argument(
+        "--require-lower",
+        action="store_true",
+        help="Require at least one lowercase letter"
+    )
+    
+    parser.add_argument(
+        "--require-digit",
+        action="store_true",
+        help="Require at least one digit"
+    )
+    
+    parser.add_argument(
+        "--require-special",
+        action="store_true",
+        help="Require at least one special character"
     )
     
     parser.add_argument(
@@ -303,6 +389,18 @@ Examples:
             print(f"Error creating output directory: {e}", file=sys.stderr)
             return 1
     
+    # Build password policy dictionary
+    password_policy = None
+    if any([args.min_length, args.max_length, args.require_upper, args.require_lower, args.require_digit, args.require_special]):
+        password_policy = {
+            'min_length': args.min_length,
+            'max_length': args.max_length,
+            'require_upper': args.require_upper,
+            'require_lower': args.require_lower,
+            'require_digit': args.require_digit,
+            'require_special': args.require_special
+        }
+    
     # Generate wordlist
     success = generate_wordlist(
         companies=args.company,
@@ -313,7 +411,8 @@ Examples:
         include_seasons=not args.no_seasons,
         include_specials=not args.no_specials,
         relnum=args.relnum,
-        verbose=args.verbose
+        verbose=args.verbose,
+        password_policy=password_policy
     )
     
     if success:
