@@ -64,7 +64,6 @@ python3 Ketchlist.py -c "TechFirm" --min-length 12 --require-upper --require-low
 | `--require-lower`   | Require at least one lowercase letter                  |
 | `--require-digit`   | Require at least one digit                              |
 | `--require-special` | Require at least one special character                 |
-       |
 
 ## DISCLAIMER
 This tool is intended for educational and authorized penetration testing purposes only. Do not use it for illegal activities.
